@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>dynamic add/update feature</title>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.css" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.js"></script>
+    <script src="ol-daum.js"></script>
+    <style>
+      body {margin: 0; padding: 0}
+      .map {height: 500px;}
+    </style>
+  </head>
+  <body>
+    <p>
+      features array를 property로 넘김(bad performance)
+    </p>
+    <div id="app">
+      <my-map :map-style='mapStyle' :features='features'></my-map>
+      <ul>
+        <li v-for='f in features'>{{ f.get('value') }}</li>
+      </ul>
+      <button v-on:click='addFeature()'>add</button>
+    </div>
+
+    <script>
+      var customStyleFunction = function(feature, resolution) {
+        //console.log( feature.getId() )
+        return [
+          new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: 'blue',
+              width: 3
+            }),
+            fill: new ol.style.Fill({
+              color: 'rgba(0, 0, ' + feature.get('value') + ', 1)'
+            })
+          })
+        ];
+      }
+
+      Vue.component('MyMap', {
+        props: [
+          'features',
+          'mapStyle'
+        ],
+        template: '<div class="map" tabindex="0"></div>',
+        mounted: function(){
+          var source = new ol.source.Vector({
+            features: this.features
+          })
+          this.source = source
+
+          var layer = new ol.layer.Vector({source: source, style: this.mapStyle})
+          this.layer = layer
+
+          var daumImgLayer = new ol.layer.Tile({
+            source: new ol.source.DaumImg()
+          })
+
+          this.map = new ol.Map({
+            layers: [
+              daumImgLayer, layer
+            ],
+            target: this.$el,
+            view: new ol.View({
+              center: [195063,441898],
+              zoom: 0,
+              maxZoom: 14,
+              maxResolution: 2048 // 14level(zoom=0)에서 1px은 2048m와 같다
+            }),
+            controls: [
+              new ol.control.Zoom()
+            ]
+          })
+        },
+        watch: {
+          features: function(list){
+            // bad performance
+            this.source.clear(true)
+            this.source.addFeatures(list)
+            //this.source.changed()
+          }
+        }
+
+      })
+
+      var g1 = new ol.geom.Polygon([[[0, 0], [200000, 0],[100000, 100000],[0, 0]]])
+      var g2 = new ol.geom.Polygon([[[0, 400000],[200000, 400000],[100000, 500000],[0, 400000]]])
+
+      new Vue({
+        el: '#app',
+        data: {
+          mapStyle: customStyleFunction,
+          features: [
+            new ol.Feature({geometry: g2, value:1})
+          ]
+        },
+        methods: {
+          addFeature: function(){
+            var f = new ol.Feature({
+              geometry: g1,
+              value: 200
+            })
+            this.features.push(f)
+          }
+        }
+      })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Daum Image Tile</title>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.css" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.js"></script>
+    <script src="ol-daum.js"></script>
+    <style>
+      body {margin: 0; padding: 0}
+      .map:focus {
+        outline: #4A74A8 solid 0.15em;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      mapView를 props로 넘기고, custom event로 mapView를 갱신한다
+    </p>
+    <div id="app">
+      <my-map :view='mapView' v-on:view-change='updateMapView'></my-map>
+      <div>
+        center: {{ mapView.center }}<br/>
+        level: {{ mapView.level }}<br/>
+      </div>
+    </div>
+
+    <script>
+      Vue.component('MyMap', {
+        props: [
+          'view'
+        ],
+        template: '<div class="map" tabindex="0"></div>',
+        mounted: function(){
+          var daumImgLayer = new ol.layer.Tile({
+            source: new ol.source.DaumImg()
+          })
+
+          this.map = new ol.Map({
+            layers: [
+              daumImgLayer
+            ],
+            target: this.$el,
+            view: new ol.View({
+              center: this.view.center,
+              zoom: 14 - this.view.level,
+              maxZoom: 14,
+              maxResolution: 2048 // 14level(zoom=0)에서 1px은 2048m와 같다
+            }),
+            controls: [
+              new ol.control.Zoom()
+            ]
+          })
+
+          _self = this
+          this.map.getView().on('change', function(e){
+            //console.log('changed', e.target.getCenter(), 14 - e.target.getZoom())
+            _self.viewChange({
+              center: e.target.getCenter(),
+              level: 14 - e.target.getZoom()
+            })
+          })
+        },
+        methods: {
+          viewChange: function(view){
+            this.$emit('view-change', view)
+          }
+        }
+        /*
+        ,
+        watch: {
+          view: function(view, view2){
+            console.log('watch', view, view2)
+            this.map.getView().setCenter(view.center)
+            this.map.getView().setZoom(14 - view.zoom)
+          }
+        }
+        */
+      })
+
+      new Vue({
+        el: '#app',
+        data: {
+          mapView: {
+            level: 5,
+            center: [195063,442898]
+          }
+        },
+        methods: {
+          updateMapView: function(view){
+            this.mapView = view
+          }
+        }
+
+      })
+    </script>
+  </body>
+</html>

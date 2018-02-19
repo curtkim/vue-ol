@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ol.layer.Vector + ol.source.Vector</title>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.css" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.4/ol-debug.js"></script>
+    <script src="ol-daum.js"></script>
+    <style>
+      body {margin: 0; padding: 0}
+      .map {height: 500px;}
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <my-map :source='featureSource' v-on:drawend='drawend'></my-map>
+      <ul>
+        <li v-for='f in featureSource.getFeatures()'>{{ f.get('createdAt') }}</li>
+      </ul>
+    </div>
+
+    <script>
+      Vue.component('MyMap', {
+        props: [
+          'source'
+        ],
+        template: '<div class="map" tabindex="0"></div>',
+        mounted: function(){
+          var layer = new ol.layer.Vector({source: this.source})
+
+          var daumImgLayer = new ol.layer.Tile({
+            source: new ol.source.DaumImg()
+          })
+
+          this.map = new ol.Map({
+            layers: [
+              daumImgLayer, layer
+            ],
+            target: this.$el,
+            view: new ol.View({
+              center: [195063,441898],
+              zoom: 0,
+              maxZoom: 14,
+              maxResolution: 2048 // 14level(zoom=0)에서 1px은 2048m와 같다
+            }),
+            controls: [
+              new ol.control.Zoom()
+            ]
+          })
+
+          draw = new ol.interaction.Draw({
+            features: [],
+            type: 'Polygon'
+          })
+          var _self = this
+          draw.on('drawend', function(event){
+            console.log(event.type)
+            console.log(event.feature)
+            console.log(event.feature.getGeometry())
+            console.log(event.feature.getGeometry().getProperties())
+            console.log(event.feature.getGeometry().getFirstCoordinate())
+            _self.$emit('drawend', event.feature.getGeometry())
+          })
+          this.map.addInteraction(draw)
+        }
+      })
+
+      new Vue({
+        el: '#app',
+        data: {
+          featureSource: new ol.source.Vector({features: []})
+        },
+        methods: {
+          drawend: function(g){
+            var f = new ol.Feature({
+              geometry: g,
+              createdAt: new Date()
+            })
+            this.featureSource.addFeature(f)
+          }
+        }
+      })
+    </script>
+  </body>
+</html>
